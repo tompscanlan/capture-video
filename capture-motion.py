@@ -12,10 +12,10 @@ import collections
 
 inMotionMin = 15
 fps =10
-MIN_CONTOUR_SIZE = 100
+MIN_CONTOUR_SIZE = 450
 SCALE_IMAGE_X = 500
 FPS_SMOOTH_RATE = 0.9
-WRITE_BUFFER_LENGTH = inMotionMin*fps
+WRITE_BUFFER_LENGTH = int(inMotionMin*fps/3)
 
 SAVE_DIR = "/ext/video_events"
 url = "rtsp://admin:banggumb0@192.168.1.189:554/h264Preview_01_main"
@@ -32,6 +32,14 @@ def openWriter( reader, fileName, fourcc, fps ):
     frameSize = (w, h)
     #print ("opening writer shape: %s" % str(frameSize))
     #print ("opening writer fourcc: %s" % str(fourcc))
+    writer = cv2.VideoWriter(fileName, fourcc, fps, frameSize, True)
+    if not writer.isOpened():
+        throw("failed to open writer")
+    return writer
+
+def openWriterDim( frameSize, fileName, fourcc, fps ):
+    "open a VideoStream writer based on the reader dimensions"
+
     writer = cv2.VideoWriter(fileName, fourcc, fps, frameSize, True)
     if not writer.isOpened():
         throw("failed to open writer")
@@ -64,18 +72,20 @@ try:
     while(True):
         t1 = cv2.getTickCount()
         i=i+1
-        print(i)
+        #Gprint(i)
         ret, frame = capture.read()
         if ret != True:
             print("missed capturing a frame");
             next
 
-        writeBuffer.append(frame)
 
         # resize the frame, convert it to grayscale, and blur it
         x = SCALE_IMAGE_X / frame.shape[1]
         dimentions = (SCALE_IMAGE_X, int(frame.shape[0] * x))
         smallFrame = cv2.resize(frame, dimentions, interpolation = cv2.INTER_AREA)
+
+        writeBuffer.append(smallFrame)
+#        writeBuffer.append(frame)
 
         gray = cv2.cvtColor(smallFrame, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
@@ -99,19 +109,21 @@ try:
             # if the contour is too small, ignore it
             if cv2.contourArea(c) < MIN_CONTOUR_SIZE:
                 print("found undersized countour %f" % cv2.contourArea(c))
-                next
+                continue
 
+            print("found countour %f" % cv2.contourArea(c))
             # when hitting new motion event, start timer
             #open writer, with current FPS
             if inMotionEvent == False:
                 inMotionStartTime = time.perf_counter()
                 print("starting motion timer: %f" % inMotionStartTime)
                 inMotionEvent = True
-                vWriter = openWriter(capture, SAVE_DIR + '/savevid-' +str(i) + '.mov', fourcc, fps)
+                #vWriter = openWriter(capture, SAVE_DIR + '/savevid-' +str(i) + '.mov', fourcc, fps)
+                vWriter = openWriterDim(dimentions, SAVE_DIR + '/savevid-' +str(i) + '.mov', fourcc, fps)
 
             # compute the bounding box for the contour, draw it on the frame,
-            #(x, y, w, h) = cv2.boundingRect(c)
-            #cv2.rectangle(smallFrame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            (x, y, w, h) = cv2.boundingRect(c)
+            cv2.rectangle(smallFrame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
         if inMotionEvent == True:
             timenow = time.perf_counter()
@@ -119,10 +131,12 @@ try:
                 print("still in motion: %f" % (timenow - inMotionStartTime) )
 
                 # write buffer and write frames
+                print("appending %d frames of video to motion event" % len(writeBuffer))
                 for f in writeBuffer:
                     vWriter.write(f)
                 writeBuffer.clear()
-                vWriter.write(frame)
+#                vWriter.write(frame)
+                #vWriter.write(smallFrame)
             else:
                 # close the writer, and
                 print("exiting motion event")
@@ -136,14 +150,16 @@ try:
         t = (t2 - t1)/cv2.getTickFrequency()
         fps = (fps * FPS_SMOOTH_RATE) + (1.0/t *(1.0 - FPS_SMOOTH_RATE))
 
-        print("time: %f fps: %f" % (t, fps))
+        #print("time: %f fps: %f" % (t, fps))
 except:
     print("Unexpected error:", sys.exc_info()[0])
     raise
 
 finally:
-    vWriter.release()
-    capture.release()
+    if capture != None and capture.isOpened():
+        capture.release()
+    if vWriter != None and vWriter.isOpened():
+        vWriter.release()
     print("released capture")
 
 
