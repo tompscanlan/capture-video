@@ -19,7 +19,7 @@ FPS_SMOOTH_RATE = 0.9
 WRITE_BUFFER_LENGTH = int(inMotionMin*fps/3)
 
 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-#url = "rtsp://admin:banggumb0@192.168.1.189:554/h264Preview_01_main"
+#url = "rtsp://admin:xxxxx@192.168.1.189:554/h264Preview_01_main"
 
 parser = argparse.ArgumentParser(description='Record motion from a camera and save clips.')
 
