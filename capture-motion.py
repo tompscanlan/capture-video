@@ -1,6 +1,8 @@
 # testing in  tompscanlan/capture-motion
 # docker run  -i -t -v `pwd`:/ext capture-video  /bin/bash
 
+
+import argparse
 import sys
 import time
 import datetime
@@ -10,16 +12,34 @@ import numpy as np
 from pprint import pprint
 import collections
 
+
 inMotionMin = 15
 fps =10
-MIN_CONTOUR_SIZE = 450
-SCALE_IMAGE_X = 500
 FPS_SMOOTH_RATE = 0.9
 WRITE_BUFFER_LENGTH = int(inMotionMin*fps/3)
 
-SAVE_DIR = "/ext/video_events"
-url = "rtsp://admin:banggumb0@192.168.1.189:554/h264Preview_01_main"
+fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+#url = "rtsp://admin:banggumb0@192.168.1.189:554/h264Preview_01_main"
 
+parser = argparse.ArgumentParser(description='Record motion from a camera and save clips.')
+
+parser.add_argument('url',
+                    help='url of the camera feed. user:pass required in url')
+parser.add_argument('-d', '--directory', metavar='directory', default='/ext/video_events',
+                    help='existing directory to store recordings into')
+parser.add_argument('-w', '--width', metavar='pixels', default=500, type=int,
+                    help='scale test images to this width in pixles.  Smaller results in faster detection')
+parser.add_argument('-m', '--minsize', metavar='pixels', default=500, type=int,
+                    help='minimum size of a detected rectangle of movment to record')
+parser.add_argument('--debug', default=False, action='store_true',
+                    help='enable debug logging')
+
+args = parser.parse_args()
+
+debug = args.debug
+SCALE_IMAGE_X = args.width
+MIN_CONTOUR_SIZE = 450
+SAVE_DIR = args.directory
 
 def openWriter( reader, fileName, fourcc, fps ):
     "open a VideoStream writer based on the reader dimensions"
@@ -54,15 +74,13 @@ def openReader( url ):
         throw("failed to open capture")
     return reader
 
-debug = False
 
 inMotionEvent = False # is motion hapening right now?
 inMotionStartTime = 0
 
 writeBuffer = collections.deque(maxlen=WRITE_BUFFER_LENGTH)
-fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 
-capture = openReader(url)
+capture = openReader(args.url)
 vWriter = None
 
 # initialize the first frame in the video stream
@@ -108,10 +126,12 @@ try:
         for c in cnts:
             # if the contour is too small, ignore it
             if cv2.contourArea(c) < MIN_CONTOUR_SIZE:
-                print("found undersized countour %f" % cv2.contourArea(c))
+                if debug:
+                    print("found undersized countour %f" % cv2.contourArea(c))
                 continue
 
-            print("found countour %f" % cv2.contourArea(c))
+            if debug:
+                print("found motion size %f" % cv2.contourArea(c))
             # when hitting new motion event, start timer
             #open writer, with current FPS
             if inMotionEvent == False:
@@ -128,10 +148,12 @@ try:
         if inMotionEvent == True:
             timenow = time.perf_counter()
             if ((timenow - inMotionStartTime) < inMotionMin):
-                print("still in motion: %f" % (timenow - inMotionStartTime) )
+                if debug:
+                    print("still in motion: %f" % (timenow - inMotionStartTime) )
 
                 # write buffer and write frames
-                print("appending %d frames of video to motion event" % len(writeBuffer))
+                if debug:
+                    print("appending %d frames of video to motion event" % len(writeBuffer))
                 for f in writeBuffer:
                     vWriter.write(f)
                 writeBuffer.clear()
@@ -139,7 +161,7 @@ try:
                 #vWriter.write(smallFrame)
             else:
                 # close the writer, and
-                print("exiting motion event")
+                print("exiting motion event after %f seconds" % ((time.perf_counter() - inMotionStartTime)) )
                 vWriter.release()
                 inMotionEvent = False
                 initialFrame = None
