@@ -7,14 +7,14 @@ import sys
 import time
 import datetime
 import cv2
-#import imutils
 import numpy as np
 from pprint import pprint
 import collections
+from motioncapture import *
 
 
 inMotionMin = 15
-fps =10
+fps = 10
 FPS_SMOOTH_RATE = 0.9
 WRITE_BUFFER_LENGTH = int(inMotionMin*fps/3)
 
@@ -40,39 +40,6 @@ debug = args.debug
 SCALE_IMAGE_X = args.width
 MIN_CONTOUR_SIZE = 450
 SAVE_DIR = args.directory
-
-def openWriter( reader, fileName, fourcc, fps ):
-    "open a VideoStream writer based on the reader dimensions"
-
-    ret, frame = reader.read()
-    if ret != True:
-        throw("missed capturing a frame")
-
-    (h,w) = frame.shape[:2]
-    frameSize = (w, h)
-    #print ("opening writer shape: %s" % str(frameSize))
-    #print ("opening writer fourcc: %s" % str(fourcc))
-    writer = cv2.VideoWriter(fileName, fourcc, fps, frameSize, True)
-    if not writer.isOpened():
-        throw("failed to open writer")
-    return writer
-
-def openWriterDim( frameSize, fileName, fourcc, fps ):
-    "open a VideoStream writer based on the reader dimensions"
-
-    writer = cv2.VideoWriter(fileName, fourcc, fps, frameSize, True)
-    if not writer.isOpened():
-        throw("failed to open writer")
-    return writer
-
-def openReader( url ):
-    "open a VideoStream reader"
-    print("connect to video %s" % url)
-    reader = cv2.VideoCapture(url)
-
-    if not reader.isOpened():
-        throw("failed to open capture")
-    return reader
 
 
 inMotionEvent = False # is motion hapening right now?

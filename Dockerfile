@@ -28,7 +28,7 @@ RUN apt update && \
     libavformat-dev \
     && apt-get -y clean all \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install imutils
+    && pip3 install imutils pytest
 
 WORKDIR /
 
