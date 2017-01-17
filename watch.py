@@ -38,7 +38,7 @@ args = parser.parse_args()
 
 debug = args.debug
 SCALE_IMAGE_X = args.width
-MIN_CONTOUR_SIZE = 450
+MIN_CONTOUR_SIZE = args.minsize
 SAVE_DIR = args.directory
 
 
@@ -64,14 +64,13 @@ try:
             next
 
 
-        # resize the frame, convert it to grayscale, and blur it
-        x = SCALE_IMAGE_X / frame.shape[1]
-        dimentions = (SCALE_IMAGE_X, int(frame.shape[0] * x))
-        smallFrame = cv2.resize(frame, dimentions, interpolation = cv2.INTER_AREA)
+        # resize the frame
+        smallFrame =scaleImageByWidth(frame, SCALE_IMAGE_X)
 
         writeBuffer.append(smallFrame)
 #        writeBuffer.append(frame)
 
+        # convert it to grayscale, and blur it
         gray = cv2.cvtColor(smallFrame, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
 
@@ -106,7 +105,7 @@ try:
                 print("starting motion timer: %f" % inMotionStartTime)
                 inMotionEvent = True
                 #vWriter = openWriter(capture, SAVE_DIR + '/savevid-' +str(i) + '.mov', fourcc, fps)
-                vWriter = openWriterDim(dimentions, SAVE_DIR + '/savevid-' +str(i) + '.mov', fourcc, fps)
+                vWriter = openWriterDim(getDimentionsFromFrame(smallFrame), SAVE_DIR + '/savevid-' +str(i) + '.mov', fourcc, fps)
 
             # compute the bounding box for the contour, draw it on the frame,
             (x, y, w, h) = cv2.boundingRect(c)

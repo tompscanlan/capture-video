@@ -42,3 +42,19 @@ def openReader( url ):
         return reader
     else:
         raise Exception("failed to open capture")
+
+def getDimentionsFromFrame( frame ):
+    return (frame.shape[1], frame.shape[0])
+
+def scaleImageByWidth( frame, width ):
+    "resize the frame in x,y dimensions to achive width of x"
+
+    # calculate scale factor
+    x = width / frame.shape[1]
+
+    # scale y dimention by that factor
+    dimentions = (width, int(frame.shape[0] * x))
+
+    # scale to the new dim
+    return cv2.resize(frame, dimentions, interpolation = cv2.INTER_AREA)
+
